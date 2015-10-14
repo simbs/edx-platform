@@ -3,13 +3,13 @@ Course API Views
 """
 
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.reverse import reverse
 
-from opaque_keys.edx.keys import CourseKey
 from openedx.core.lib.api.view_utils import view_auth_classes
-from xmodule.modulestore.django import modulestore
 
+from .api import (
+    list_courses,
+    course_view
+)
 
 @view_auth_classes()
 class CourseView(APIView):
@@ -40,14 +40,15 @@ class CourseView(APIView):
 
             {"blocks_url": "https://server/api/courses/v1/blocks/[usage_key]"}
         """
+        return course_view(request, course_key_string)
 
-        course_key = CourseKey.from_string(course_key_string)
-        course_usage_key = modulestore().make_course_usage_key(course_key)
 
-        blocks_url = reverse(
-            'blocks_in_block_tree',
-            kwargs={'usage_key_string': unicode(course_usage_key)},
-            request=request,
-        )
+class CourseListView(APIView):
+    """
+    View class to list courses
+    """
+    def get(self, request):
 
-        return Response({'blocks_url': blocks_url})
+        username = request.query_params.get('user', '')
+
+        return list_courses(request, username)
