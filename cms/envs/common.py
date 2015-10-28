@@ -821,8 +821,17 @@ INSTALLED_APPS = (
     # other apps that are.  Django 1.8 wants to have imported models supported
     # by installed apps.
     'lms.djangoapps.verify_student',
+
+    # OAuth2 Provider
+    'provider',
+    'provider.oauth2',
 )
 
+############################ OAUTH2 Provider ###################################
+
+# OpenID Connect issuer ID. Normally the URL of the authentication endpoint.
+
+OAUTH_OIDC_ISSUER = 'https:/example.com/oauth2'
 
 ################# EDX MARKETING SITE ##################################
 
