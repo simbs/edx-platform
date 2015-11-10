@@ -1,27 +1,22 @@
-"""
-Broadly-useful mixins for use in automated tests.
-"""
-
+"""Mixins for use during testing."""
 from openedx.core.djangoapps.programs.models import ProgramsApiConfig
 
 
 class ProgramsApiConfigMixin(object):
-    """
-    Programs api configuration utility methods for testing.
-    """
+    """Utilities for working with Programs configuration during testing."""
 
-    INTERNAL_URL = "http://internal/"
-    PUBLIC_URL = "http://public/"
-
-    DEFAULTS = dict(
-        internal_service_url=INTERNAL_URL,
-        public_service_url=PUBLIC_URL,
-        api_version_number=1,
-    )
+    DEFAULTS = {
+        'enabled': True,
+        'api_version_number': 1,
+        'internal_service_url': 'http://internal.programs.org/',
+        'public_service_url': 'http://public.programs.org/',
+        'authoring_app_js_path': '/path/to/js',
+        'authoring_app_css_path': '/path/to/css',
+        'enable_student_dashboard': True,
+        'enable_studio_tab': True,
+    }
 
     def create_config(self, **kwargs):
-        """
-        DRY helper.  Create a new ProgramsApiConfig with self.DEFAULTS, updated
-        with any kwarg overrides.
-        """
-        ProgramsApiConfig(**dict(self.DEFAULTS, **kwargs)).save()
+        """Creates a new ProgramsApiConfig with DEFAULTS, updated with any provided overrides."""
+        fields = dict(self.DEFAULTS, **kwargs)
+        ProgramsApiConfig(**fields).save()
