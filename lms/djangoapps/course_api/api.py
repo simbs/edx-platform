@@ -45,7 +45,7 @@ def list_courses(requesting_user, username):
     """
 
     if has_permission(requesting_user, username) is not True:
-        raise ValueError # Raise something better than this
+        raise ValueError  # Raise something better than this
     if username:
         user = User.objects.get(username=username)
     else:
