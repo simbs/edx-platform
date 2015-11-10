@@ -2,14 +2,15 @@
 Course API Views
 """
 
-from rest_framework.views import APIView
-
+from rest_framework import status
+from rest_framework.views import APIView, Response
 from openedx.core.lib.api.view_utils import view_auth_classes
 
 from .api import (
     list_courses,
     course_view
 )
+
 
 @view_auth_classes()
 class CourseView(APIView):
@@ -40,7 +41,8 @@ class CourseView(APIView):
 
             {"blocks_url": "https://server/api/courses/v1/blocks/[usage_key]"}
         """
-        return course_view(request, course_key_string)
+        content = course_view(course_key_string)
+        return Response(content)
 
 
 class CourseListView(APIView):
@@ -49,6 +51,11 @@ class CourseListView(APIView):
     """
     def get(self, request):
 
-        username = request.query_params.get('user', '')
+        username = request.query_params.get('username', '')
 
-        return list_courses(request, username)
+        try:
+            content = list_courses(request.user, username)
+        except ValueError:
+            return Response('Unauthorized', status=status.HTTP_403_FORBIDDEN)
+        return Response(content)
+

@@ -3,55 +3,55 @@ Course API
 """
 
 from django.contrib.auth.models import User
+from django.core.urlresolvers import reverse
 from django.template import defaultfilters
-from rest_framework import status
-from rest_framework.response import Response
 
 from opaque_keys.edx.keys import CourseKey
 
 from xmodule.course_module import DEFAULT_START_DATE
+from xmodule.modulestore.django import modulestore
 
-from courseware.courses import (
+from lms.djangoapps.courseware.courses import (
     get_courses,
     course_image_url,
     get_course_about_section,
 )
 
 
-def has_permission(request, username):
-
+def has_permission(requesting_user, username):
     if not username:
         return False
-
-    user = request.user
-    return user and (user.is_staff or user.username == username)
+    return requesting_user.is_staff or requesting_user.username == username
 
 
-def course_view(request, course_key_string):
+def course_view(course_key_string):
+    '.'
 
     course_key = CourseKey.from_string(course_key_string)
     course_usage_key = modulestore().make_course_usage_key(course_key)
 
-    return Response({
+    return {
         'blocks_url': reverse(
-                    'blocks_in_block_tree',
-                    kwargs={'usage_key_string': unicode(course_usage_key)},
-                    request=request,
-                    )
-    })
+            'blocks_in_block_tree',
+            kwargs={'usage_key_string': unicode(course_usage_key)},
+        ),
+    }
 
 
-def list_courses(request, username):
+def list_courses(requesting_user, username):
+    """
+    Return a list of courses visible to the user identified by `username` on
+    behalf of `requesting_user`
+    """
 
-    if (has_permission(request, username) is not True):
-        return Response('Unauthorized', status=status.HTTP_403_FORBIDDEN)
-
-    if (username != ''):
-        new_user = User.objects.get(username=username)
+    if has_permission(requesting_user, username) is not True:
+        raise ValueError # Raise something better than this
+    if username:
+        user = User.objects.get(username=username)
     else:
-        new_user = request.user
+        user = requesting_user
 
-    courses = get_courses(new_user)
+    courses = get_courses(user)
     courses_json = []
 
     for course in courses:
@@ -80,4 +80,4 @@ def list_courses(request, username):
             "course_image": course_image_url(course),
         })
 
-    return Response(courses_json)
+    return courses_json
