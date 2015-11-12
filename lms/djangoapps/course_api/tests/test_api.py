@@ -58,38 +58,38 @@ class TestGetCourseList(ModuleStoreTestCase):
         """
         return ToyCourseFactory.create()
 
-    def test_user_course_list_as_staff(self):
-        user = self.create_user("staff", "staff@example.com", "edx", True)
-        request = self.request_factory.get('/')
+    def _api_shim(self, request, api_callable, user, username):
+        """
+        Wrap the call to `list_courses` in a view-like callable that takes a
+        request object as the first argument.
+
+        This needs to be here to make the `course_description` field work.  It
+        looks for a request object as a first argument somewhere on the stack.
+        """
         request.user = user
-        # This needs to be here to make course_description field work.  It
-        # looks for a request object as a first argument somewhere on the stack
-        courses = (lambda request: list_courses(user, "staff"))(request)
+        return api_callable(user, username)
+
+    def test_user_course_list_as_staff(self):
+        request = self.request_factory.get('/')
+        user = self.create_user("staff", "staff@example.com", "edx", True)
+        courses = self._api_shim(request, list_courses, user, "staff")
         self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
 
     def test_honor_user_course_list_as_staff(self):
+        request = self.request_factory.get('/')
         user = self.create_user("staff", "staff@example.com", "edx", True)
         honor_user = self.create_user("honor", "honor@example.com", "edx", False)
-        request = self.request_factory.get('/')
-        request.user = user
-        # This needs to be here to make course_description field work.  It
-        # looks for a request object as a first argument somewhere on the stack
-        courses = (lambda request: list_courses(user, honor_user.username))(request)
+        courses = self._api_shim(request, list_courses, user, honor_user.username)
         self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
 
     def test_user_course_list_as_honor(self):
-        user = self.create_user("honor", "honor@example.com", "edx", False)
         request = self.request_factory.get('/')
-        request.user = user
-        # This needs to be here to make course_description field work.  It
-        # looks for a request object as a first argument somewhere on the stack
-        courses = (lambda request: list_courses(user, "honor"))(request)
+        user = self.create_user("honor", "honor@example.com", "edx", False)
+        courses = self._api_shim(request, list_courses, user, "honor")
         self.assertEqual(courses.data, [self.expected_course_data])
 
     def test_staff_user_course_list_as(self):
-        user = self.create_user("honor", "honor@example.com", "edx", False)
         request = self.request_factory.get('/')
-        request.user = self.create_user("honor", "honor@example.com", "edx", False)
+        user = self.create_user("honor", "honor@example.com", "edx", False)
         with self.assertRaises(ValueError):
-            (lambda request: list_courses(user, "staff"))(request)
-
+            self._api_shim(request, list_courses, user, "staff")
