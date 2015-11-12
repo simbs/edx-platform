@@ -66,7 +66,7 @@ class CourseSerializer(serializers.Serializer):
         data['start_type'] = start_type
         data['start_display'] = start_display
 
-        data['description'] = get_course_about_section(course, 'short_description').strip()
+        # data['description'] = get_course_about_section(request, course, 'short_description').strip()
         data['course_image'] = course_image_url(course)
         data['blocks_url'] = '?'.join([
             reverse('blocks_in_course'),
