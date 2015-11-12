@@ -38,12 +38,20 @@
       .title {
         @extend %t-title4;
         @extend %t-strong;
-        margin-bottom: ($baseline/2);
       }
 
       .copy {
         @extend %t-copy-sub1;
       }
+
+      .instructions {
+        @extend %copy-detail;
+        margin-bottom: $baseline;
+      }
+    }
+
+    .certificate-settings {
+      margin-bottom: ($baseline*2);
     }
   }
 
