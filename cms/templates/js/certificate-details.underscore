@@ -20,7 +20,7 @@
              <div class='certificate-info-section'>
                  <div class='course-title-section pull-left'>
                     <p class="actual-course-title">
-                            <span class="certificate-label"><b><%= gettext('Course Title') %>: </b> </span>
+                            <span class="certificate-label"><%= gettext('Course Title') %>: </span>
                             <span class="certificate-value"><%= course.get('name') %></span>
                     </p>
                     <% if (course_title) { %>
