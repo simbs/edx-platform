@@ -7,8 +7,8 @@ from rest_framework.views import APIView, Response
 from openedx.core.lib.api.view_utils import view_auth_classes
 
 from .api import (
+    course_detail,
     list_courses,
-    course_view
 )
 
 
@@ -21,12 +21,13 @@ class CourseView(APIView):
     def get(self, request, course_key_string):
         """
         Request information on a course specified by `course_key_string`.
-            Body consists of a `blocks_url` that can be used to fetch the
-            blocks for the requested course.
+
+        Body consists of a `blocks_url` that can be used to fetch the blocks
+        for the requested course.
 
         Arguments:
             request (HttpRequest)
-            course_key_string
+            course_key_string: string representing the course key
 
         Returns:
             HttpResponse: 200 on success
@@ -41,20 +42,44 @@ class CourseView(APIView):
 
             {"blocks_url": "https://server/api/courses/v1/blocks/[usage_key]"}
         """
-        content = course_view(course_key_string)
+        content = course_detail(course_key_string)
         return Response(content)
 
 
 class CourseListView(APIView):
     """
-    View class to list courses
+    View class to list multiple courses
     """
     def get(self, request):
+        """
+        Request information on all courses visible to the specified user
 
-        username = request.query_params.get('username', '')
+        Body consists of a lit of objects as returned by `CourseView`.
+
+        Arguments:
+
+            request (HttpRequest)
+
+        Parameters:
+
+            username (optional):
+                The username of the specified user whose visible courses we
+                want to see.  Defaults to the current user.
+
+        Returns:
+
+            - A 404 response, if the specified user does not exist, or the
+              requesting user does not have permission to view their
+              courses.
+
+            - A 200 response, if the request is successful, with a list of
+              course discovery objects as returned by `CourseView`.
+        """
+
+        username = request.query_params.get('username', request.user.username)
 
         try:
             content = list_courses(request.user, username)
         except ValueError:
-            return Response('Unauthorized', status=status.HTTP_403_FORBIDDEN)
+            return Response('Unauthorized', status=status.HTTP_404_NOT_FOUND)
         return Response(content)

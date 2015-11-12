@@ -206,13 +206,29 @@ def get_course_about_section(course, section_key):
     # markup. This can change without effecting this interface when we find a
     # good format for defining so many snippets of text/html.
 
-    # TODO: Remove number, instructors from this list
-    if section_key in ['short_description', 'description', 'key_dates', 'video',
-                       'course_staff_short', 'course_staff_extended',
-                       'requirements', 'syllabus', 'textbook', 'faq', 'more_info',
-                       'number', 'instructors', 'overview',
-                       'effort', 'end_date', 'prerequisites', 'ocw_links']:
+    # TODO: Remove number, instructors from this set
+    html_sections = {
+        'short_description',
+        'description',
+        'key_dates',
+        'video',
+        'course_staff_short',
+        'course_staff_extended',
+        'requirements',
+        'syllabus',
+        'textbook',
+        'faq',
+        'more_info',
+        'number',
+        'instructors',
+        'overview',
+        'effort',
+        'end_date',
+        'prerequisites',
+        'ocw_links'
+    }
 
+    if section_key in html_sections:
         try:
 
             request = get_request_for_thread()
