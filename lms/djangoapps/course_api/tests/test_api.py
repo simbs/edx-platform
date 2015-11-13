@@ -40,6 +40,8 @@ class TestGetCourseList(ModuleStoreTestCase):
     def setUp(self):
         super(TestGetCourseList, self).setUp()
         self.create_course()
+        self.staff_user = self.create_user("staff", "staff@example.com", "edx", True)
+        self.honor_user = self.create_user("honor", "honor@example.com", "edx", False)
 
     def create_user(self, username, email, password, is_staff):
         """
@@ -58,27 +60,27 @@ class TestGetCourseList(ModuleStoreTestCase):
         """
         return ToyCourseFactory.create()
 
-    def test_user_course_list_as_staff(self):
+    def _make_api_call(self, requesting_user, specified_user):
+        """
+        Call the list_courses api endpoint to get information about
+        `specified_user` on behalf of `requesting_user`.
+        """
         request = self.request_factory.get('/')
-        user = self.create_user("staff", "staff@example.com", "edx", True)
-        courses = list_courses(user, "staff", request)
+        request.user = requesting_user
+        return list_courses(requesting_user, specified_user.username, request)
+
+    def test_user_course_list_as_staff(self):
+        courses = self._make_api_call(self.staff_user, self.staff_user)
         self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
 
     def test_honor_user_course_list_as_staff(self):
-        request = self.request_factory.get('/')
-        user = self.create_user("staff", "staff@example.com", "edx", True)
-        honor_user = self.create_user("honor", "honor@example.com", "edx", False)
-        courses = list_courses(user, honor_user.username, request)
+        courses = self._make_api_call(self.staff_user, self.honor_user)
         self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
 
     def test_user_course_list_as_honor(self):
-        request = self.request_factory.get('/')
-        user = self.create_user("honor", "honor@example.com", "edx", False)
-        courses = list_courses(user, "honor", request)
+        courses = self._make_api_call(self.honor_user, self.honor_user)
         self.assertEqual(courses.data, [self.expected_course_data])
 
     def test_staff_user_course_list_as(self):
-        request = self.request_factory.get('/')
-        user = self.create_user("honor", "honor@example.com", "edx", False)
         with self.assertRaises(ValueError):
-            list_courses(user, "staff", request)
+            self._make_api_call(self.honor_user, self.staff_user)
