@@ -29,7 +29,7 @@ class TestGetCourseList(ModuleStoreTestCase):
         'org': u'edX',
         'start': u'2015-07-17T12:00:00Z',
         'start_display': u'July 17, 2015',
-        'start_type': 'timestamp',
+        'start_type': u'timestamp',
     }
 
     @classmethod
