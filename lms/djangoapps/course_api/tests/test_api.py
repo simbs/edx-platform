@@ -58,38 +58,27 @@ class TestGetCourseList(ModuleStoreTestCase):
         """
         return ToyCourseFactory.create()
 
-    def _api_shim(self, request, api_callable, user, username):
-        """
-        Wrap the call to `list_courses` in a view-like callable that takes a
-        request object as the first argument.
-
-        This needs to be here to make the `course_description` field work.  It
-        looks for a request object as a first argument somewhere on the stack.
-        """
-        request.user = user
-        return api_callable(user, username)
-
     def test_user_course_list_as_staff(self):
         request = self.request_factory.get('/')
         user = self.create_user("staff", "staff@example.com", "edx", True)
-        courses = self._api_shim(request, list_courses, user, "staff")
+        courses = list_courses(user, "staff", request)
         self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
 
     def test_honor_user_course_list_as_staff(self):
         request = self.request_factory.get('/')
         user = self.create_user("staff", "staff@example.com", "edx", True)
         honor_user = self.create_user("honor", "honor@example.com", "edx", False)
-        courses = self._api_shim(request, list_courses, user, honor_user.username)
+        courses = list_courses(user, honor_user.username, request)
         self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
 
     def test_user_course_list_as_honor(self):
         request = self.request_factory.get('/')
         user = self.create_user("honor", "honor@example.com", "edx", False)
-        courses = self._api_shim(request, list_courses, user, "honor")
+        courses = list_courses(user, "honor", request)
         self.assertEqual(courses.data, [self.expected_course_data])
 
     def test_staff_user_course_list_as(self):
         request = self.request_factory.get('/')
         user = self.create_user("honor", "honor@example.com", "edx", False)
         with self.assertRaises(ValueError):
-            self._api_shim(request, list_courses, user, "staff")
+            list_courses(user, "staff", request)

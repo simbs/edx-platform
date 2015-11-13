@@ -29,7 +29,7 @@ def _has_permission(requesting_user, username):
     return requesting_user.is_staff or requesting_user.username == username
 
 
-def course_detail(course_key_string):
+def course_detail(course_key_string, request):
     """
     Return a single course
     """
@@ -37,10 +37,10 @@ def course_detail(course_key_string):
     # course_usage_key = modulestore().make_course_usage_key(course_key)
 
     course = get_course_by_id(course_key_string)
-    return CourseSerializer(course)
+    return CourseSerializer(course, context={'request': request})
 
 
-def list_courses(requesting_user, username):
+def list_courses(requesting_user, username, request):
     """
     Return a list of courses visible to the user identified by `username` on
     behalf of `requesting_user`
@@ -54,4 +54,4 @@ def list_courses(requesting_user, username):
         user = requesting_user
 
     courses = get_courses(user)
-    return CourseSerializer(courses, many=True)
+    return CourseSerializer(courses, context={'request': request}, many=True)

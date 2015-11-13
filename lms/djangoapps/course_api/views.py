@@ -42,7 +42,7 @@ class CourseView(APIView):
 
             {"blocks_url": "https://server/api/courses/v1/blocks/[usage_key]"}
         """
-        content = course_detail(course_key_string)
+        content = course_detail(course_key_string, request)
         return Response(content)
 
 
@@ -79,7 +79,7 @@ class CourseListView(APIView):
         username = request.query_params.get('username', request.user.username)
 
         try:
-            content = list_courses(request.user, username)
+            content = list_courses(request.user, username, request)
         except ValueError:
             return Response('Unauthorized', status=status.HTTP_404_NOT_FOUND)
         return Response(content)
