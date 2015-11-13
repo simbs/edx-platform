@@ -4,6 +4,7 @@ Course API Views
 
 from rest_framework import status
 from rest_framework.views import APIView, Response
+
 from openedx.core.lib.api.view_utils import view_auth_classes
 
 from .api import (
@@ -13,7 +14,7 @@ from .api import (
 
 
 @view_auth_classes()
-class CourseView(APIView):
+class CourseDetailView(APIView):
     """
     Course API view
     """
@@ -50,6 +51,7 @@ class CourseListView(APIView):
     """
     View class to list multiple courses
     """
+
     def get(self, request):
         """
         Request information on all courses visible to the specified user

@@ -15,10 +15,8 @@ from lms.djangoapps.courseware.courses import (
     get_course_about_section,
 )
 
-START_TYPE_CHOICES = [('string', 'string'), ('timestamp', 'timestamp'), ('empty', 'empty')]
 
-
-class CourseSerializer(serializers.Serializer):
+class CourseSerializer(serializers.Serializer):  # pylint: disable=abstract-method
     """
     Serializer for Course objects
     """
@@ -27,49 +25,55 @@ class CourseSerializer(serializers.Serializer):
     name = serializers.CharField(source='display_name_with_default')
     number = serializers.CharField(source='display_number_with_default')
     org = serializers.CharField(source='display_org_with_default')
+    description = serializers.SerializerMethodField()
+    course_image = serializers.SerializerMethodField()
     start = serializers.DateTimeField()
-    # start_type = serializers.ChoiceField(choices=START_TYPE_CHOICES)
-    # start_display = serializers.CharField()
+    start_type = serializers.SerializerMethodField()
+    start_display = serializers.SerializerMethodField()
     end = serializers.DateTimeField()
     enrollment_start = serializers.DateTimeField()
     enrollment_end = serializers.DateTimeField()
-    # course_image = serializers.URLField()
-    # blocks_url = serializers.URLField()
 
-    def create(self, *args, **kwargs):
-        """
-        Course creation is not supported through this API
-        """
-        pass
 
-    def update(self, *args, **kwargs):
-        """
-        Course updates are not supported through this API
-        """
-        pass
-
-    def to_representation(self, course):
-        """
-        Create a dictionary representation of a course for serialization
-        """
-        data = super(CourseSerializer, self).to_representation(course)
-
+    def get_start_type(self, course):
+        '''
+        Get the representation for SerializerMethodField `start_type`
+        '''
         if course.advertised_start is not None:
-            start_type = 'string'
-            start_display = course.advertised_start
+            return u'string'
         elif course.start != DEFAULT_START_DATE:
-            start_type = 'timestamp'
-            start_display = defaultfilters.date(course.start, "DATE_FORMAT")
+            return u'timestamp'
         else:
-            start_type = 'empty'
-            start_display = None
-        data['start_type'] = start_type
-        data['start_display'] = start_display
+            return u'empty'
 
-        data['description'] = get_course_about_section(self.context['request'], course, 'short_description').strip()
-        data['course_image'] = course_image_url(course)
-        data['blocks_url'] = '?'.join([
+    def get_start_display(self, course):
+        '''
+        Get the representation for SerializerMethodField `start_display`
+        '''
+        if course.advertised_start is not None:
+            return course.advertised_start
+        elif course.start != DEFAULT_START_DATE:
+            return defaultfilters.date(course.start, "DATE_FORMAT")
+        else:
+            return None
+
+    def get_description(self, course):
+        '''
+        Get the representation for SerializerMethodField `description`
+        '''
+        return get_course_about_section(self.context['request'], course, 'short_description').strip()
+
+    def get_course_image(self, course):
+        '''
+        Get the representation for SerializerMethodField `course_image`
+        '''
+        return course_image_url(course)
+
+    def get_blocks_url(self, course):
+        '''
+        Get the representation for SerializerMethodField `blocks_url`
+        '''
+        return '?'.join([
             reverse('blocks_in_course'),
             urllib.urlencode({'course_id': course.id}),
         ])
-        return data
