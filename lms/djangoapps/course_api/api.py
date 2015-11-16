@@ -7,6 +7,7 @@ from lms.djangoapps.courseware.courses import (
     get_courses,
     get_course_by_id
 )
+from opaque_keys.edx.keys import CourseKey
 
 from .serializers import CourseSerializer
 
@@ -36,7 +37,7 @@ def course_detail(course_key_string, request):
     # course_key = CourseKey.from_string(course_key_string)
     # course_usage_key = modulestore().make_course_usage_key(course_key)
 
-    course = get_course_by_id(course_key_string)
+    course = get_course_by_id(CourseKey.from_string(course_key_string))
     return CourseSerializer(course, context={'request': request})
 
 

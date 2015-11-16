@@ -2,8 +2,12 @@
 Course API Views
 """
 
+from django.http import Http404
+
 from rest_framework import status
 from rest_framework.views import APIView, Response
+
+from opaque_keys import InvalidKeyError
 
 from openedx.core.lib.api.view_utils import view_auth_classes
 
@@ -43,7 +47,10 @@ class CourseDetailView(APIView):
 
             {"blocks_url": "https://server/api/courses/v1/blocks/[usage_key]"}
         """
-        content = course_detail(course_key_string, request)
+        try:
+            content = course_detail(course_key_string, request)
+        except InvalidKeyError:
+            raise Http404()
         return Response(content)
 
 

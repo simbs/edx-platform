@@ -2,19 +2,18 @@
 Test for course API
 """
 
-from lettuce import world
+from django.http import Http404
 from django.test import RequestFactory
+from lettuce import world
 
+from opaque_keys import InvalidKeyError
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import ToyCourseFactory
 
-from lms.djangoapps.course_api.api import list_courses
+from lms.djangoapps.course_api.api import course_detail, list_courses
 
 
-class TestGetCourseList(ModuleStoreTestCase):
-    """
-    Test the behavior of the course list api
-    """
+class CourseApiTestMixin(object):
 
     expected_course_data = {
         'blocks_url': '/api/courses/v1/blocks/?course_id=edX%2Ftoy%2F2012_Fall',
@@ -34,16 +33,18 @@ class TestGetCourseList(ModuleStoreTestCase):
 
     @classmethod
     def setUpClass(cls):
-        super(TestGetCourseList, cls).setUpClass()
+        super(CourseApiTestMixin, cls).setUpClass()
         cls.request_factory = RequestFactory()
 
-    def setUp(self):
-        super(TestGetCourseList, self).setUp()
-        self.create_course()
-        self.staff_user = self.create_user("staff", "staff@example.com", "edx", True)
-        self.honor_user = self.create_user("honor", "honor@example.com", "edx", False)
+    @staticmethod
+    def create_course():
+        """
+        Create a course for use in test cases
+        """
+        return ToyCourseFactory.create()
 
-    def create_user(self, username, email, password, is_staff):
+    @staticmethod
+    def create_user(username, email, password, is_staff):
         """
         Create a user as identified by username, email, password and is_staff.
         """
@@ -54,11 +55,43 @@ class TestGetCourseList(ModuleStoreTestCase):
             is_staff=is_staff)
         return user
 
-    def create_course(self):
+
+class TestGetCourseDetail(CourseApiTestMixin, ModuleStoreTestCase):
+    def setUp(self):
+        super(TestGetCourseDetail, self).setUp()
+        self.create_course()
+        self.user = self.create_user("user", "user@example.com", "edx", False)
+
+    def _make_api_call(self, course_key):
         """
-        Create a course for use in test cases
+        Call the list_courses api endpoint to get information about
+        `specified_user` on behalf of `requesting_user`.
         """
-        return ToyCourseFactory.create()
+        request = self.request_factory.get('/')
+        request.user = self.user
+        return course_detail(course_key, request)
+
+    def test_get_existing_course(self):
+        result = self._make_api_call(u'edX/toy/2012_Fall')
+        self.assertEqual(self.expected_course_data, result.data)
+
+    def test_get_nonexistant_course(self):
+        self.assertRaises(Http404, self._make_api_call, u'edX/toy/nope')
+
+    def test_get_malformed_course_key(self):
+        self.assertRaises(InvalidKeyError, self._make_api_call, u'edX:toy:nope')
+
+
+class TestGetCourseList(CourseApiTestMixin, ModuleStoreTestCase):
+    """
+    Test the behavior of the course list api
+    """
+
+    def setUp(self):
+        super(TestGetCourseList, self).setUp()
+        self.create_course()
+        self.staff_user = self.create_user("staff", "staff@example.com", "edx", True)
+        self.honor_user = self.create_user("honor", "honor@example.com", "edx", False)
 
     def _make_api_call(self, requesting_user, specified_user):
         """
