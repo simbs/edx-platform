@@ -6,8 +6,11 @@ from collections import defaultdict
 from functools import wraps
 import logging
 import json
-from django.http import HttpResponseBadRequest
 
+from django.core.serializers.json import DjangoJSONEncoder
+from django.http import HttpResponseBadRequest
+from django.utils.encoding import force_text
+from django.utils.functional import Promise
 
 LOGGER = logging.getLogger(__name__)
 
@@ -143,7 +146,8 @@ class FormDescription(object):
     def add_field(
         self, name, label=u"", field_type=u"text", default=u"",
         placeholder=u"", instructions=u"", required=True, restrictions=None,
-        options=None, include_default_option=False, error_messages=None
+        options=None, include_default_option=False, error_messages=None,
+        custom=False,
     ):
         """Add a field to the form description.
 
@@ -184,6 +188,9 @@ class FormDescription(object):
                 that the messages should be displayed if the user does
                 not provide a value for a required field.
 
+            custom (boolean): Marker for any fields which have been added for this instance using
+                the customized form set in settings.REGISTRATION_EXTENSION_FORM.
+
         Raises:
             InvalidFieldError
 
@@ -205,6 +212,7 @@ class FormDescription(object):
             "required": required,
             "restrictions": {},
             "errorMessages": {},
+            "custom": custom,
         }
 
         if field_type == "select":
@@ -297,7 +305,7 @@ class FormDescription(object):
             "method": self.method,
             "submit_url": self.submit_url,
             "fields": self.fields
-        })
+        }, cls=LocalizedJSONEncoder)
 
     def override_field_properties(self, field_name, **kwargs):
         """Override properties of a field.
@@ -328,6 +336,19 @@ class FormDescription(object):
             for property_name, property_value in kwargs.iteritems()
             if property_name in self.OVERRIDE_FIELD_PROPERTIES
         })
+
+
+class LocalizedJSONEncoder(DjangoJSONEncoder):
+    """
+    JSON handler that evaluates ugettext_lazy promises.
+    """
+    def default(self, o):
+        """
+        Forces evaluation of ugettext_lazy promises.
+        """
+        if isinstance(o, Promise):
+            return force_text(o)
+        super(LocalizedJSONEncoder, self).default(o)
 
 
 def shim_student_view(view_func, check_logged_in=False):

@@ -9,6 +9,7 @@ from django.contrib.auth.hashers import UNUSABLE_PASSWORD
 from django.contrib.auth.tokens import default_token_generator
 
 from django.utils.http import int_to_base36
+from django.utils.importlib import import_module
 from django.utils.translation import ugettext_lazy as _
 from django.template import loader
 
@@ -234,3 +235,51 @@ class AccountCreationForm(forms.Form):
             for key, value in self.cleaned_data.items()
             if key in self.extended_profile_fields and value is not None
         }
+
+
+class DummyRegistrationExtensionForm(forms.Form):
+    """
+    This form is a placeholder form that can be overwritten by changing the value of
+    settings.REGISTRATION_EXTENSION_FORM. This form should be a standard Django form
+    with a save() method which takes a user argument.
+
+    A normal Django Model form is not quite suitable here, as it likely to require a model
+    which has a foreign key to the user, but the user will not yet be saved, so validation
+    will not complete.
+    """
+
+    def save(self, user=None):
+        """
+        Dummy save method.
+        """
+        pass
+
+    class Meta(object):
+        """
+        The serialization_options dictionary is used to help fill in the gaps that Django's form
+        system does not provide in order to use the 'FormDescription.add_field' function in
+        core.djangoapps.user_api.helpers. The settings that can't automatically be derived are:
+
+        * restrictions
+        * default
+        * include_default_option
+        * field_type (but only if you're using a field not in RegistrationView.FIELD_TYPE_MAP)
+
+        All other options can be mapped. For instance 'instructions' is populated from the standard 'help_text'
+        argument on the field.
+        """
+        serialization_options = {}
+
+
+def get_custom_form(*args, **kwargs):
+    """
+    Convenience function for getting the custom form set in settings.REGISTRATION_EXTENSION_FORM.
+
+    If settings.FEATURES["ENABLE_COMBINED_LOGIN_REGISTRATION"] is False, the dummy form is used regardless
+    of the setting.
+    """
+    if not settings.FEATURES.get("ENABLE_COMBINED_LOGIN_REGISTRATION"):
+        return DummyRegistrationExtensionForm(*args, **kwargs)
+    module, klass = settings.REGISTRATION_EXTENSION_FORM.rsplit('.', 1)
+    module = import_module(module)
+    return getattr(module, klass)(*args, **kwargs)

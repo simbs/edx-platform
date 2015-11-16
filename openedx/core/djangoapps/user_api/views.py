@@ -1,5 +1,7 @@
 """HTTP end-points for the User API. """
 import copy
+
+from django import forms
 from opaque_keys import InvalidKeyError
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -24,6 +26,7 @@ from openedx.core.lib.api.permissions import ApiKeyHeaderPermission
 import third_party_auth
 from django_comment_common.models import Role
 from edxmako.shortcuts import marketing_link
+from student.forms import get_custom_form
 from student.views import create_account_with_params
 from student.cookies import set_logged_in_cookies
 from openedx.core.lib.api.authentication import SessionAuthenticationAllowInactiveUser
@@ -168,6 +171,15 @@ class RegistrationView(APIView):
         "terms_of_service",
     ]
 
+    FIELD_TYPE_MAP = {
+        forms.CharField: "text",
+        forms.PasswordInput: "password",
+        forms.ChoiceField: "select",
+        forms.Textarea: "textarea",
+        forms.BooleanField: "checkbox",
+        forms.EmailField: "email",
+    }
+
     # This end-point is available to anonymous users,
     # so do not require authentication.
     authentication_classes = []
@@ -229,6 +241,21 @@ class RegistrationView(APIView):
         for field_name in self.DEFAULT_FIELDS:
             self.field_handlers[field_name](form_desc, required=True)
 
+        # Custom form fields can be added via the form set in settings.REGISTRATION_EXTENSION_FORM
+        custom_form = get_custom_form()
+
+        for field_name, field in custom_form.fields.items():
+            form_desc.add_field(
+                field_name, label=field.label,
+                default=self.field_options(custom_form, field_name).get('default'),
+                field_type=self.field_type(custom_form, field_name, field),
+                placeholder=field.initial, instructions=field.help_text, required=field.required,
+                restrictions=self.field_options(custom_form, field_name).get('restrictions'),
+                options=getattr(field, 'choices', None), error_messages=field.error_messages,
+                include_default_option=self.field_options(custom_form, field_name).get('include_default_option'),
+                custom=True,
+            )
+
         # Extra fields configured in Django settings
         # may be required, optional, or hidden
         for field_name in self.EXTRA_FIELDS:
@@ -239,6 +266,16 @@ class RegistrationView(APIView):
                 )
 
         return HttpResponse(form_desc.to_json(), content_type="application/json")
+
+    @staticmethod
+    def field_options(form, field_name):
+        options = getattr(getattr(form, 'Meta', None), 'serialization_options', {})
+        return options.get(field_name, {})
+
+    @classmethod
+    def field_type(cls, form, field_name, field):
+        options = cls.field_options(form, field_name)
+        return options.get('field_type', cls.FIELD_TYPE_MAP.get(field.__class__))
 
     @method_decorator(csrf_exempt)
     def post(self, request):
