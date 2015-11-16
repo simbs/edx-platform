@@ -53,8 +53,7 @@ from student.models import (
     CourseEnrollmentAllowed, UserStanding, LoginFailures,
     create_comments_service_user, PasswordHistory, UserSignupSource,
     DashboardConfiguration, LinkedInAddToProfileConfiguration, ManualEnrollmentAudit, ALLOWEDTOENROLL_TO_ENROLLED)
-from student.forms import AccountCreationForm, PasswordResetFormNoActive
-
+from student.forms import AccountCreationForm, PasswordResetFormNoActive, get_custom_form
 from verify_student.models import SoftwareSecurePhotoVerification  # pylint: disable=import-error
 from certificates.models import CertificateStatuses, certificate_status_for_student
 from certificates.api import (  # pylint: disable=import-error
@@ -1418,7 +1417,7 @@ def user_signup_handler(sender, **kwargs):  # pylint: disable=unused-argument
             log.info(u'user {} originated from a white labeled "Microsite"'.format(kwargs['instance'].id))
 
 
-def _do_create_account(form):
+def _do_create_account(form, custom_form=None):
     """
     Given cleaned post variables, create the User and UserProfile objects, as well as the
     registration for this user.
@@ -1427,8 +1426,15 @@ def _do_create_account(form):
 
     Note: this function is also used for creating test users.
     """
-    if not form.is_valid():
-        raise ValidationError(form.errors)
+    errors = {}
+    form.is_valid()
+    errors.update(form.errors)
+    if custom_form:
+        custom_form.is_valid()
+        errors.update(custom_form.errors)
+
+    if errors:
+        raise ValidationError(errors)
 
     user = User(
         username=form.cleaned_data["username"],
@@ -1442,6 +1448,8 @@ def _do_create_account(form):
     # Right now, we can have e.g. no registration e-mail sent out and a zombie account
     try:
         user.save()
+        if custom_form:
+            custom_form.save(user=user)
     except IntegrityError:
         # Figure out the cause of the integrity error
         if len(User.objects.filter(username=user.username)) > 0:
@@ -1571,11 +1579,12 @@ def create_account_with_params(request, params):
         enforce_password_policy=enforce_password_policy,
         tos_required=tos_required,
     )
+    custom_form = get_custom_form(data=params)
 
     # Perform operations within a transaction that are critical to account creation
     with transaction.commit_on_success():
         # first, create the account
-        (user, profile, registration) = _do_create_account(form)
+        (user, profile, registration) = _do_create_account(form, custom_form)
 
         # next, link the account with social auth, if provided via the API.
         # (If the user is using the normal register page, the social auth pipeline does the linking, not this code)

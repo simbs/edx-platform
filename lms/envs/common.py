@@ -2712,3 +2712,7 @@ PROCTORING_SETTINGS = {}
 # The reason we introcuced this number is because we do not want the CCX
 # to compete with the MOOC.
 CCX_MAX_STUDENTS_ALLOWED = 200
+
+#### Registration form extension. Only used if combined login/registration is enabled ####
+
+REGISTRATION_EXTENSION_FORM = 'student.forms.DummyRegistrationExtensionForm'

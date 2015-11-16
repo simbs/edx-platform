@@ -4,6 +4,7 @@ Tests for helper functions.
 import json
 import mock
 import ddt
+from django import forms
 from django.http import HttpRequest, HttpResponse
 from django.test import TestCase
 from nose.tools import raises
@@ -108,7 +109,7 @@ class FormDescriptionTest(TestCase):
                     },
                     "errorMessages": {
                         "required": "You must provide a value!"
-                    }
+                    },
                 }
             ]
         }))
@@ -214,3 +215,47 @@ class StudentViewShimTest(TestCase):
             self.captured_request = request
             return response
         return shim_student_view(stub_view, check_logged_in=check_logged_in)
+
+
+MOVIE_MIN_LEN = 3
+MOVIE_MAX_LEN = 100
+
+
+class TestCaseForm(forms.Form):
+    """
+    Test registration extension form.
+    """
+    DUMMY_STORAGE = {}
+
+    FAVORITE_EDITOR = (
+        ('vim', 'Vim'),
+        ('emacs', 'Emacs'),
+        ('np', 'Notepad'),
+        ('cat', 'cat > filename')
+    )
+
+    favorite_movie = forms.CharField(
+        label="Fav Flick", min_length=MOVIE_MIN_LEN, max_length=MOVIE_MAX_LEN, error_messages={
+            "required": u"Please tell us your favorite movie."
+        }
+    )
+    favorite_editor = forms.ChoiceField(label="Favorite Editor", choices=FAVORITE_EDITOR, required=False, initial='cat')
+
+    def save(self, user=None):
+        """
+        Store the result in the dummy storage dict.
+        """
+        self.DUMMY_STORAGE[user.id] = {
+            'favorite_movie': self.cleaned_data.get('favorite_movie'),
+            'favorite_editor': self.cleaned_data.get('favorite_editor'),
+        }
+
+    class Meta(object):
+        """
+        Set options for fields which can't be conveyed in their definition.
+        """
+        serialization_options = {
+            'favorite_editor': {
+                'default': 'vim',
+            },
+        }
