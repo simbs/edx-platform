@@ -91,4 +91,4 @@ class CourseListView(APIView):
             content = list_courses(request.user, username, request)
         except ValueError:
             return Response('Unauthorized', status=status.HTTP_404_NOT_FOUND)
-        return Response(content)
+        return Response(content.data)
