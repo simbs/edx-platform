@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import json
 import logging
 import datetime
+from mock import patch
 
 from django.test import TestCase
 
@@ -50,31 +51,64 @@ class TestLoggerBackend(TestCase):
         self.assertEqual(saved_events[0], unpacked_event)
         self.assertEqual(saved_events[1], unpacked_event)
 
-    def test_logger_backend_unicode_character(self):
+    @patch('track.backends.logger.application_log')
+    def test_logger_backend_unicode_character(self, application_log):
         """
         When event information contain utf and latin1 characters
         """
         # Utf-8 characters
-        event_string_unicode = {'string': '测试'}
-        event_unicode_characters = {'string': u'测试'}
-        # pylint: disable=invalid-name
-        event_encoded_unicode_characters_string = {
-            'string': event_unicode_characters['string'].encode('utf-8')
+        unicode_characters = {'test': u'测试'}
+        unicode_characters_string = {'test': '测试'}
+        encoded_unicode_characters = {
+            'test': unicode_characters['test'].encode('utf-8')
         }
         # Latin1 characters
-        event_string_latin_characters = {'string': 'Ó é ñ'}
-        event_unicode_latin_characters = {'string': u'Ó é ñ'}
-        event_encoded_latin_characters_string = {
-            'string': event_unicode_latin_characters['string'].encode('latin1')
+        unicode_latin_characters = {'test': u'Ó é ñ'}
+        latin_characters_string = {'test': 'Ó é ñ'}
+        encoded_latin_characters_string = {
+            'test': unicode_latin_characters['test'].encode('latin1')
         }  # pylint: disable=invalid-name
+        # Mix utf-8 and latin characters
+        latin_and_unicode_characters = {'test': u'Ó é ñ and 测试'}
+        latin_and_unicode_string = {'test': 'Ó é ñ and 测试'}
+        encoded_latin_and_unicode_characters = {
+            'test': unicode_characters['test'].encode('utf-8') + ' and ' + \
+                    unicode_latin_characters['test'].encode('latin1')
+        }
 
-        self.backend.send(event_string_unicode)
-        self.backend.send(event_unicode_characters)
-        self.backend.send(event_encoded_unicode_characters_string)
+        self.backend.send(unicode_characters)
+        self.backend.send(unicode_characters_string)
+        self.backend.send(encoded_unicode_characters)
 
-        self.backend.send(event_string_latin_characters)
-        self.backend.send(event_unicode_latin_characters)
-        self.backend.send(event_encoded_latin_characters_string)
+        self.backend.send(unicode_latin_characters)
+        self.backend.send(latin_characters_string)
+        self.backend.send(encoded_latin_characters_string)
+        # encoded_latin_characters_string will raise UnicodeDecodeError due to encoded latin characters
+        application_log.warning.assert_called_with(
+            "UnicodeDecodeError Event-Data: %s", encoded_latin_characters_string
+        )
+
+        self.backend.send(latin_and_unicode_characters)
+        self.backend.send(latin_and_unicode_string)
+        self.backend.send(encoded_latin_and_unicode_characters)
+        # encoded_latin_and_unicode_characters will raise UnicodeDecodeError due to encoded latin characters
+        application_log.warning.assert_called_with(
+            "UnicodeDecodeError Event-Data: %s", encoded_latin_and_unicode_characters
+        )
+
+        saved_events = [json.loads(e) for e in self.handler.messages['info']]
+        # Utf-8 characters saved events correctness
+        self.assertEqual(saved_events[0], unicode_characters)
+        self.assertEqual(saved_events[1], unicode_characters)
+        self.assertEqual(saved_events[2], unicode_characters)
+        # Utf-8 characters saved events correctness
+        self.assertEqual(saved_events[3], unicode_latin_characters)
+        self.assertEqual(saved_events[4], unicode_latin_characters)
+        self.assertEqual(saved_events[5], encoded_latin_characters_string)
+        # Mix utf-8 and latin1 characters saved events correctness
+        self.assertEqual(saved_events[6], latin_and_unicode_characters)
+        self.assertEqual(saved_events[7], latin_and_unicode_characters)
+        self.assertEqual(saved_events[8], encoded_latin_and_unicode_characters)
 
 
 class MockLoggingHandler(logging.Handler):
