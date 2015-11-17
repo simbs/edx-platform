@@ -96,8 +96,6 @@ class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
             self._make_api_call(self.honor_user, self.honor_user.username, course_key)
 
     def test_hidden_course_for_honor(self):
-        from django.conf import settings
-        print settings.FEATURES.get('ACCESS_REQUIRE_STAFF_FOR_COURSE')
         course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
         with self.assertRaises(Http404):
             self._make_api_call(self.honor_user, self.honor_user.username, course_key)

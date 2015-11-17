@@ -66,9 +66,7 @@ class CourseApiTestViewMixin(object):
         """
         query_params = {}
         query_params.update(params or {})
-        print query_params
         response = self.client.get(self.url, data=query_params)
-        print response
         self.assertEqual(response.status_code, expected_status_code)
         return response
 

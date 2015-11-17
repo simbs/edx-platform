@@ -116,9 +116,7 @@ class CourseListView(APIView):
         username = request.query_params.get('username', request.user.username)
 
         try:
-            print username
             content = list_courses(request.user, username, request)
         except PermissionDenied:
-            print "denied"
             raise NotFound()
         return Response(content.data)
