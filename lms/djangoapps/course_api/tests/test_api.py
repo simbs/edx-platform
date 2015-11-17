@@ -18,6 +18,9 @@ from lms.djangoapps.course_api.api import course_detail, list_courses
 
 
 class CourseApiTestMixin(object):
+    """
+    Establish basic functionality for Course API tests
+    """
 
     maxDiff = 1000  # long enough to show mismatched dicts
 
@@ -69,6 +72,9 @@ class CourseApiTestMixin(object):
 
 
 class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
+    """
+    Test course_detail api function
+    """
     @classmethod
     def setUpClass(cls):
         super(TestGetCourseDetail, cls).setUpClass()
@@ -112,17 +118,10 @@ class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
             self._make_api_call(self.honor_user, self.honor_user.username, course_key)
 
 
-class TestGetCourseList(CourseApiTestMixin, SharedModuleStoreTestCase):
+class CourseListTestMixin(CourseApiTestMixin):
     """
-    Test the behavior of the course list api
+    Common behavior for list_courses tests
     """
-    @classmethod
-    def setUpClass(cls):
-        super(TestGetCourseList, cls).setUpClass()
-        cls.create_course()
-        cls.staff_user = cls.create_user("staff", is_staff=True)
-        cls.honor_user = cls.create_user("honor", is_staff=False)
-
     def _make_api_call(self, requesting_user, specified_user):
         """
         Call the list_courses api endpoint to get information about
@@ -131,6 +130,18 @@ class TestGetCourseList(CourseApiTestMixin, SharedModuleStoreTestCase):
         request = self.request_factory.get('/')
         request.user = requesting_user
         return list_courses(requesting_user, specified_user.username, request)
+
+
+class TestGetCourseList(CourseListTestMixin, SharedModuleStoreTestCase):
+    """
+    Test the behavior of the `list_courses` api function.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(TestGetCourseList, cls).setUpClass()
+        cls.create_course()
+        cls.staff_user = cls.create_user("staff", is_staff=True)
+        cls.honor_user = cls.create_user("honor", is_staff=False)
 
     def test_as_staff(self):
         courses = self._make_api_call(self.staff_user, self.staff_user)
@@ -168,22 +179,16 @@ class TestGetCourseList(CourseApiTestMixin, SharedModuleStoreTestCase):
         self.assertEqual(len(courses.data), 2)
 
 
-class TestGetCourseListExtras(CourseApiTestMixin, ModuleStoreTestCase):
-
+class TestGetCourseListExtras(CourseListTestMixin, ModuleStoreTestCase):
+    """
+    Tests of course_list api function that require alternative configurations
+    of created courses.
+    """
     @classmethod
     def setUpClass(cls):
         super(TestGetCourseListExtras, cls).setUpClass()
         cls.staff_user = cls.create_user("staff", is_staff=True)
         cls.honor_user = cls.create_user("honor", is_staff=False)
-
-    def _make_api_call(self, requesting_user, specified_user):
-        """
-        Call the list_courses api endpoint to get information about
-        `specified_user` on behalf of `requesting_user`.
-        """
-        request = self.request_factory.get('/')
-        request.user = requesting_user
-        return list_courses(requesting_user, specified_user.username, request)
 
     def test_no_courses(self):
         courses = self._make_api_call(self.honor_user, self.honor_user)
@@ -199,4 +204,3 @@ class TestGetCourseListExtras(CourseApiTestMixin, ModuleStoreTestCase):
         courses = self._make_api_call(self.staff_user, self.staff_user)
         self.assertEqual(len(courses.data), 1)
         self.assertEqual(courses.data[0], self.expected_course_data)
-

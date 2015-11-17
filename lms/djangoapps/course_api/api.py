@@ -3,9 +3,9 @@ Course API
 """
 
 from django.contrib.auth.models import User
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import PermissionDenied
 
-from lms.djangoapps.courseware.courses import get_courses, get_course_by_id, get_course_with_access
+from lms.djangoapps.courseware.courses import get_courses, get_course_with_access
 
 from .permissions import can_view_courses_for_username
 from .serializers import CourseSerializer
@@ -21,6 +21,7 @@ def get_effective_user(requesting_user, target_username):
         return User.objects.get(username=target_username)
     else:
         raise PermissionDenied()
+
 
 def course_detail(requesting_user, username, course_key, request):
     """

@@ -3,7 +3,6 @@ Course API Views
 """
 
 from rest_framework.exceptions import NotFound, PermissionDenied
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView, Response
 
 from opaque_keys import InvalidKeyError

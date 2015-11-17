@@ -8,8 +8,8 @@ from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import ToyCourseFactory
 
-
 TEST_PASSWORD = 'edx'
+
 
 class CourseApiTestViewMixin(object):
     """
@@ -119,5 +119,3 @@ class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase
 
     def test_tests_defined(self):
         self.fail()
-
-

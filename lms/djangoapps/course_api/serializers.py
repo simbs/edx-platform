@@ -10,10 +10,7 @@ from django.template import defaultfilters
 from rest_framework import serializers
 
 from xmodule.course_module import DEFAULT_START_DATE
-from lms.djangoapps.courseware.courses import (
-    course_image_url,
-    get_course_about_section,
-)
+from lms.djangoapps.courseware.courses import course_image_url, get_course_about_section
 
 
 class CourseSerializer(serializers.Serializer):  # pylint: disable=abstract-method
