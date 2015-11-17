@@ -3,91 +3,123 @@ Tests for Blocks Views
 """
 
 from django.core.urlresolvers import reverse
-from lettuce import world
 
-from student.models import CourseEnrollment
-from student.tests.factories import CourseEnrollmentFactory
+from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
 from xmodule.modulestore.tests.factories import ToyCourseFactory
 
 
+TEST_PASSWORD = 'edx'
 
 class CourseApiTestViewMixin(object):
     """
     Mixin class for test helpers for Course API views
     """
-    @classmethod
-    def create_course(cls):
+
+    @staticmethod
+    def create_course():
         """
-        Create a sample course
+        Create a sample course.
         """
         return ToyCourseFactory.create()
 
-    def create_user(self, username, email, password, is_staff):
-        return world.UserFactory(
+    @staticmethod
+    def create_user(username, email, is_staff):
+        """
+        Create a user for testing purposes.
+
+        Arguments:
+            `username`: (string)
+            `email`: (string)
+            `is_staff`: (boolean)
+
+        Return value:
+            User object
+        """
+        return UserFactory(
             username=username,
             email=email,
-            password=password,
+            password=TEST_PASSWORD,
             is_staff=is_staff
         )
 
-    def setup_user(self, requesting_user, enrolled_user=None):
+    def setup_user(self, requesting_user):
         """
-        Create a user, logged in, and enrolled in the sample course
+        log in the specified user, and remember it as `self.user`
         """
         self.user = requesting_user  # pylint: disable=attribute-defined-outside-init
-        self.client.login(username=self.user.username, password='edx')
-        CourseEnrollmentFactory.create(user=enrolled_user or self.user, course_id=self.course.id)
+        self.client.login(username=self.user.username, password=TEST_PASSWORD)
 
-    def verify_response(self, expected_status_code=200, params=None, url=None):
+    def verify_response(self, expected_status_code=200, params=None):
         """
-        Ensure that the sending a GET request to the specified URL (or self.url)
-        returns the expected status code (200 by default).
+        Ensure that sending a GET request to self.url returns the expected
+        status code (200 by default).
 
         Arguments:
             expected_status_code: (default 200)
             params:
-                query parameters to include in the request (includes
-                username=[self.user.username]&depth=all by default)
-            url: (default [self.url])
+                query parameters to include in the request. Can include
+                `username`.
 
         Returns:
-            response: The HttpResponse returned by the request
+            response: (HttpResponse) The response returned by the request
         """
-        query_params = {
-            'username': self.user
-        }
+        query_params = {}
         query_params.update(params or {})
-        response = self.client.get(url or self.url, param=query_params)
+        print query_params
+        response = self.client.get(self.url, data=query_params)
+        print response
         self.assertEqual(response.status_code, expected_status_code)
         return response
 
 
 class CourseListViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):
+    """
+    Test responses returned from CourseListView.
+    """
 
     @classmethod
     def setUpClass(cls):
         super(CourseListViewTestCase, cls).setUpClass()
         cls.course = ToyCourseFactory.create()
+        cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
+        cls.honor_user = cls.create_user(username='honor', email='honor@example.com', is_staff=False)
         cls.url = reverse('course-list')
 
     def setUp(self):
         super(CourseListViewTestCase, self).setUp()
-        self.staff_user = world.UserFactory(username='staff', email='staff@example.com', password='edx', is_staff=True)
-        self.honor_user = world.UserFactory(username='honor', email='honor@example.com', password='edx', is_staff=False)
 
-    def test_staff_for_self(self):
+    def test_as_staff(self):
         self.setup_user(self.staff_user)
         self.verify_response()
 
-    def test_staff_for_other(self):
-        self.setup_user(self.staff_user, enrolled_user=self.honor_user)
+    def test_as_staff_for_other(self):
+        self.setup_user(self.staff_user)
         self.verify_response(params={'username': self.honor_user.username})
 
-    def test_student_for_self(self):
+    def test_as_student(self):
         self.setup_user(self.honor_user)
         self.verify_response()
 
-    def test_student_for_other(self):
-        self.setup_user(self.honor_user, enrolled_user=self.staff_user)
+    def test_as_student_for_explicit_self(self):
+        self.setup_user(self.honor_user)
+        self.verify_response(params={'username': self.honor_user.username})
+
+    def test_as_student_for_other(self):
+        self.setup_user(self.honor_user)
         self.verify_response(expected_status_code=404, params={'username': self.staff_user.username})
+
+    def test_not_logged_in(self):
+        self.client.logout()
+        self.verify_response(403)
+
+
+class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):
+    """
+    Test responses returned from CourseDetailView.
+    """
+
+    def test_tests_defined(self):
+        self.fail()
+
+

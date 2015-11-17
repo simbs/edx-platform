@@ -6,12 +6,11 @@ from datetime import datetime
 
 from django.http import Http404
 from django.test import RequestFactory
-from lettuce import world
 from rest_framework.exceptions import PermissionDenied
 
-from opaque_keys import InvalidKeyError
 from opaque_keys.edx.keys import CourseKey
-from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
+from student.tests.factories import UserFactory
+from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase, ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import ToyCourseFactory
 
 from lms.djangoapps.course_api.api import course_detail, list_courses
@@ -43,62 +42,87 @@ class CourseApiTestMixin(object):
         cls.request_factory = RequestFactory()
 
     @staticmethod
-    def create_course():
+    def create_course(**kwargs):
         """
         Create a course for use in test cases
         """
+
         return ToyCourseFactory.create(
             end=datetime(2015, 9, 19, 18, 0, 0),
             enrollment_start=datetime(2015, 6, 15, 0, 0, 0),
             enrollment_end=datetime(2015, 7, 15, 0, 0, 0),
+            **kwargs
         )
 
     @staticmethod
-    def create_user(username, email, password, is_staff):
+    def create_user(username, is_staff):
         """
         Create a user as identified by username, email, password and is_staff.
         """
-        user = world.UserFactory(
+        return UserFactory(
             username=username,
-            email=email,
-            password=password,
-            is_staff=is_staff)
-        return user
+            email='{}@example.com'.format(username),
+            password='edx',
+            is_staff=is_staff
+        )
 
 
-class TestGetCourseDetail(CourseApiTestMixin, ModuleStoreTestCase):
-    def setUp(self):
-        super(TestGetCourseDetail, self).setUp()
-        self.create_course()
-        self.user = self.create_user("user", "user@example.com", "edx", False)
+class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TestGetCourseDetail, cls).setUpClass()
+        cls.course = cls.create_course()
+        cls.hidden_course = cls.create_course(course=u'hidden', visible_to_staff_only=True)
+        cls.honor_user = cls.create_user('honor', is_staff=False)
+        cls.staff_user = cls.create_user('staff', is_staff=True)
 
-    def _make_api_call(self, course_key):
+    def _make_api_call(self, requesting_user, target_user, course_key):
         """
-        Call the list_courses api endpoint to get information about
-        `specified_user` on behalf of `requesting_user`.
+        Call the `course_detail` api endpoint to get information on the course
+        identified by `course_key`.
         """
         request = self.request_factory.get('/')
-        request.user = self.user
-        return course_detail(course_key, request)
+        request.user = requesting_user
+        return course_detail(request.user, target_user, course_key, request)
 
     def test_get_existing_course(self):
-        result = self._make_api_call(CourseKey.from_string(u'edX/toy/2012_Fall'))
+        course_key = CourseKey.from_string(u'edX/toy/2012_Fall')
+        result = self._make_api_call(self.honor_user, self.honor_user.username, course_key)
         self.assertEqual(self.expected_course_data, result.data)
 
-    def test_get_nonexistant_course(self):
-        self.assertRaises(Http404, self._make_api_call, CourseKey.from_string(u'edX/toy/nope'))
+    def test_get_nonexistent_course(self):
+        course_key = CourseKey.from_string(u'edX/toy/nope')
+        with self.assertRaises(Http404):
+            self._make_api_call(self.honor_user, self.honor_user.username, course_key)
+
+    def test_hidden_course_for_honor(self):
+        from django.conf import settings
+        print settings.FEATURES.get('ACCESS_REQUIRE_STAFF_FOR_COURSE')
+        course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
+        with self.assertRaises(Http404):
+            self._make_api_call(self.honor_user, self.honor_user.username, course_key)
+
+    def test_hidden_course_for_staff(self):
+        course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
+        result = self._make_api_call(self.staff_user, self.staff_user.username, course_key)
+        self.assertIsInstance(result.data, dict)
+
+    def test_hidden_course_for_staff_as_honor(self):
+        course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
+        with self.assertRaises(Http404):
+            self._make_api_call(self.honor_user, self.honor_user.username, course_key)
 
 
-class TestGetCourseList(CourseApiTestMixin, ModuleStoreTestCase):
+class TestGetCourseList(CourseApiTestMixin, SharedModuleStoreTestCase):
     """
     Test the behavior of the course list api
     """
-
-    def setUp(self):
-        super(TestGetCourseList, self).setUp()
-        self.create_course()
-        self.staff_user = self.create_user("staff", "staff@example.com", "edx", True)
-        self.honor_user = self.create_user("honor", "honor@example.com", "edx", False)
+    @classmethod
+    def setUpClass(cls):
+        super(TestGetCourseList, cls).setUpClass()
+        cls.create_course()
+        cls.staff_user = cls.create_user("staff", is_staff=True)
+        cls.honor_user = cls.create_user("honor", is_staff=False)
 
     def _make_api_call(self, requesting_user, specified_user):
         """
@@ -109,21 +133,60 @@ class TestGetCourseList(CourseApiTestMixin, ModuleStoreTestCase):
         request.user = requesting_user
         return list_courses(requesting_user, specified_user.username, request)
 
-    def test_user_course_list_as_staff(self):
+    def test_as_staff(self):
         courses = self._make_api_call(self.staff_user, self.staff_user)
         self.assertEqual(len(courses.data), 1)
         self.assertEqual(courses.data[0], self.expected_course_data)
 
-    def test_honor_user_course_list_as_staff(self):
+    def test_for_honor_user_as_staff(self):
         courses = self._make_api_call(self.staff_user, self.honor_user)
         self.assertEqual(len(courses.data), 1)
         self.assertEqual(courses.data[0], self.expected_course_data)
 
-    def test_user_course_list_as_honor(self):
+    def test_as_honor(self):
         courses = self._make_api_call(self.honor_user, self.honor_user)
         self.assertEqual(len(courses.data), 1)
         self.assertEqual(courses.data[0], self.expected_course_data)
 
-    def test_staff_user_course_list_as(self):
+    def test_for_staff_user_as_honor(self):
         with self.assertRaises(PermissionDenied):
             self._make_api_call(self.honor_user, self.staff_user)
+
+    def test_multiple_courses(self):
+        self.create_course(course='second')
+        courses = self._make_api_call(self.honor_user, self.honor_user)
+        self.assertEqual(len(courses.data), 2)
+
+
+class TestGetCourseListExtras(CourseApiTestMixin, ModuleStoreTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(TestGetCourseListExtras, cls).setUpClass()
+        cls.staff_user = cls.create_user("staff", is_staff=True)
+        cls.honor_user = cls.create_user("honor", is_staff=False)
+
+    def _make_api_call(self, requesting_user, specified_user):
+        """
+        Call the list_courses api endpoint to get information about
+        `specified_user` on behalf of `requesting_user`.
+        """
+        request = self.request_factory.get('/')
+        request.user = requesting_user
+        return list_courses(requesting_user, specified_user.username, request)
+
+    def test_no_courses(self):
+        courses = self._make_api_call(self.honor_user, self.honor_user)
+        self.assertEqual(len(courses.data), 0)
+
+    def test_hidden_course_for_honor(self):
+        self.create_course(visible_to_staff_only=True)
+        courses = self._make_api_call(self.honor_user, self.honor_user)
+        self.assertEqual(len(courses.data), 0)
+
+    def test_hidden_course_for_staff(self):
+        self.create_course(visible_to_staff_only=True)
+        courses = self._make_api_call(self.staff_user, self.staff_user)
+        self.assertEqual(len(courses.data), 1)
+        self.assertEqual(courses.data[0], self.expected_course_data)
+

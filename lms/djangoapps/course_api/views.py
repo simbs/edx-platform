@@ -3,6 +3,7 @@ Course API Views
 """
 
 from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView, Response
 
 from opaque_keys import InvalidKeyError
@@ -17,8 +18,9 @@ from .api import course_detail, list_courses
 @view_auth_classes()
 class CourseDetailView(APIView):
     """
-    Course API view
+    View class to describe a course
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, course_key_string):
         """
@@ -46,6 +48,11 @@ class CourseDetailView(APIView):
             request: (HttpRequest)
             course_key_string: (string) Key for the desired course
 
+        Parameters:
+            username (optional):
+                The username of the specified user whose visible courses we
+                want to see.  Defaults to the current user.
+
         Returns:
             HttpResponse: 200 on success
 
@@ -70,17 +77,19 @@ class CourseDetailView(APIView):
                 "start_type": "timestamp"
             }
         """
+        username = request.query_params.get('username', request.user.username)
         try:
             course_key = CourseKey.from_string(course_key_string)
         except InvalidKeyError:
             raise NotFound()
-        return Response(course_detail(course_key, request))
+        return Response(course_detail(self.request.user, username, course_key, request))
 
 
 class CourseListView(APIView):
     """
     View class to list multiple courses
     """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """
@@ -107,7 +116,9 @@ class CourseListView(APIView):
         username = request.query_params.get('username', request.user.username)
 
         try:
+            print username
             content = list_courses(request.user, username, request)
         except PermissionDenied:
-            return NotFound()
+            print "denied"
+            raise NotFound()
         return Response(content.data)
