@@ -50,7 +50,7 @@ class CourseApiTestViewMixin(object):
         self.user = requesting_user  # pylint: disable=attribute-defined-outside-init
         self.client.login(username=self.user.username, password=TEST_PASSWORD)
 
-    def verify_response(self, expected_status_code=200, params=None):
+    def verify_response(self, expected_status_code=200, params=None, url=None):
         """
         Ensure that sending a GET request to self.url returns the expected
         status code (200 by default).
@@ -66,7 +66,7 @@ class CourseApiTestViewMixin(object):
         """
         query_params = {}
         query_params.update(params or {})
-        response = self.client.get(self.url, data=query_params)
+        response = self.client.get(url or self.url, data=query_params)
         self.assertEqual(response.status_code, expected_status_code)
         return response
 
@@ -76,16 +76,14 @@ class CourseListViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):
     Test responses returned from CourseListView.
     """
 
+
     @classmethod
     def setUpClass(cls):
         super(CourseListViewTestCase, cls).setUpClass()
         cls.course = ToyCourseFactory.create()
+        cls.url = reverse('course-list')
         cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
         cls.honor_user = cls.create_user(username='honor', email='honor@example.com', is_staff=False)
-        cls.url = reverse('course-list')
-
-    def setUp(self):
-        super(CourseListViewTestCase, self).setUp()
 
     def test_as_staff(self):
         self.setup_user(self.staff_user)
@@ -117,5 +115,44 @@ class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase
     Test responses returned from CourseDetailView.
     """
 
-    def test_tests_defined(self):
-        self.fail()
+
+    @classmethod
+    def setUpClass(cls):
+        super(CourseDetailViewTestCase, cls).setUpClass()
+        cls.course = ToyCourseFactory.create()
+        cls.hidden_course = ToyCourseFactory.create(course=u'hidden', visible_to_staff_only=True)
+        cls.url = reverse('course-detail', kwargs={'course_key_string': cls.course.id})
+        cls.hidden_url = reverse('course-detail', kwargs={'course_key_string': cls.hidden_course.id})
+        cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
+        cls.honor_user = cls.create_user(username='honor', email='honor@example.com', is_staff=False)
+
+    def test_as_student(self):
+        self.setup_user(self.honor_user)
+        self.verify_response()
+
+    def test_as_student_for_explicit_self(self):
+        self.setup_user(self.honor_user)
+        self.verify_response(params={'username': self.honor_user.username})
+
+    def test_as_student_for_other(self):
+        self.setup_user(self.honor_user)
+        self.verify_response(expected_status_code=404, params={'username': self.staff_user.username})
+
+    def test_as_staff(self):
+        self.setup_user(self.staff_user)
+        self.verify_response()
+
+    def test_as_staff_for_other(self):
+        self.setup_user(self.staff_user)
+        self.verify_response(params={'username': self.honor_user.username})
+
+    def test_as_anonymous_user(self):
+        self.verify_response(expected_status_code=401)
+
+    def test_hidden_course_as_student(self):
+        self.setup_user(self.honor_user)
+        self.verify_response(expected_status_code=404, url=self.hidden_url)
+
+    def test_hidden_course_as_staff(self):
+        self.setup_user(self.staff_user)
+        self.verify_response(url=self.hidden_url)

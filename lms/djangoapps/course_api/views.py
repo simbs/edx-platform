@@ -80,7 +80,11 @@ class CourseDetailView(APIView):
             course_key = CourseKey.from_string(course_key_string)
         except InvalidKeyError:
             raise NotFound()
-        return Response(course_detail(self.request.user, username, course_key, request))
+        try:
+            content = course_detail(self.request.user, username, course_key, request)
+        except PermissionDenied:
+            raise NotFound()
+        return Response(content.data)
 
 
 class CourseListView(APIView):
