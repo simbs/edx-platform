@@ -22,7 +22,8 @@ from openedx.core.lib.js_utils import escape_json_dumps
 
 <%block name="requirejs">
   require(["js/factories/course_info"], function(CourseInfoFactory) {
-      CourseInfoFactory(
+
+  CourseInfoFactory(
         "${updates_url}",
         "${handouts_locator | escapejs}",
         "${base_asset_url}",
