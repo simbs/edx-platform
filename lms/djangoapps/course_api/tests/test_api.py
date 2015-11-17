@@ -2,11 +2,15 @@
 Test for course API
 """
 
+from datetime import datetime
+
 from django.http import Http404
 from django.test import RequestFactory
 from lettuce import world
+from rest_framework.exceptions import PermissionDenied
 
 from opaque_keys import InvalidKeyError
+from opaque_keys.edx.keys import CourseKey
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import ToyCourseFactory
 
@@ -15,13 +19,15 @@ from lms.djangoapps.course_api.api import course_detail, list_courses
 
 class CourseApiTestMixin(object):
 
+    maxDiff = 1000  # long enough to show mismatched dicts
+
     expected_course_data = {
         'blocks_url': '/api/courses/v1/blocks/?course_id=edX%2Ftoy%2F2012_Fall',
         'course_image': u'/c4x/edX/toy/asset/just_a_test.jpg',
         'description': u'A course about toys.',
-        'end': None,
-        'enrollment_end': None,
-        'enrollment_start': None,
+        'end': u'2015-09-19T18:00:00Z',
+        'enrollment_end': u'2015-07-15T00:00:00Z',
+        'enrollment_start': u'2015-06-15T00:00:00Z',
         'id': u'edX/toy/2012_Fall',
         'name': u'Toy Course',
         'number': u'toy',
@@ -41,7 +47,11 @@ class CourseApiTestMixin(object):
         """
         Create a course for use in test cases
         """
-        return ToyCourseFactory.create()
+        return ToyCourseFactory.create(
+            end=datetime(2015, 9, 19, 18, 0, 0),
+            enrollment_start=datetime(2015, 6, 15, 0, 0, 0),
+            enrollment_end=datetime(2015, 7, 15, 0, 0, 0),
+        )
 
     @staticmethod
     def create_user(username, email, password, is_staff):
@@ -72,14 +82,11 @@ class TestGetCourseDetail(CourseApiTestMixin, ModuleStoreTestCase):
         return course_detail(course_key, request)
 
     def test_get_existing_course(self):
-        result = self._make_api_call(u'edX/toy/2012_Fall')
+        result = self._make_api_call(CourseKey.from_string(u'edX/toy/2012_Fall'))
         self.assertEqual(self.expected_course_data, result.data)
 
     def test_get_nonexistant_course(self):
-        self.assertRaises(Http404, self._make_api_call, u'edX/toy/nope')
-
-    def test_get_malformed_course_key(self):
-        self.assertRaises(InvalidKeyError, self._make_api_call, u'edX:toy:nope')
+        self.assertRaises(Http404, self._make_api_call, CourseKey.from_string(u'edX/toy/nope'))
 
 
 class TestGetCourseList(CourseApiTestMixin, ModuleStoreTestCase):
@@ -104,16 +111,19 @@ class TestGetCourseList(CourseApiTestMixin, ModuleStoreTestCase):
 
     def test_user_course_list_as_staff(self):
         courses = self._make_api_call(self.staff_user, self.staff_user)
-        self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
+        self.assertEqual(len(courses.data), 1)
+        self.assertEqual(courses.data[0], self.expected_course_data)
 
     def test_honor_user_course_list_as_staff(self):
         courses = self._make_api_call(self.staff_user, self.honor_user)
-        self.assertEqual([dict(course) for course in courses.data], [self.expected_course_data])
+        self.assertEqual(len(courses.data), 1)
+        self.assertEqual(courses.data[0], self.expected_course_data)
 
     def test_user_course_list_as_honor(self):
         courses = self._make_api_call(self.honor_user, self.honor_user)
-        self.assertEqual(courses.data, [self.expected_course_data])
+        self.assertEqual(len(courses.data), 1)
+        self.assertEqual(courses.data[0], self.expected_course_data)
 
     def test_staff_user_course_list_as(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(PermissionDenied):
             self._make_api_call(self.honor_user, self.staff_user)

@@ -7,48 +7,40 @@ from lms.djangoapps.courseware.courses import (
     get_courses,
     get_course_by_id
 )
-from opaque_keys.edx.keys import CourseKey
 
+from rest_framework.exceptions import PermissionDenied
+
+from .permissions import can_view_courses_for_username
 from .serializers import CourseSerializer
 
 
-def _has_permission(requesting_user, username):
+def course_detail(course_key, request):
     """
-    Returns true if `requesting_user` has permission to access the user
-    identified by `username`.
+    Return a single course identified by `course_key`
 
     Arguments:
-        requesting_user (User): The user requesting permission to view another
-        username (string): The name of the user `requesting_user` would like
-        to access.
+        `course_key`: (CourseKey)
+            Identifies the course of interest
+
+        `request`: (HTTPRequest)
+            Is used to retrieve the course description from modulestore
 
     Return value:
-        Boolean
+        CourseSerializer object representing the requested course
     """
-    if not username:
-        return False
-    return requesting_user.is_staff or requesting_user.username == username
-
-
-def course_detail(course_key_string, request):
-    """
-    Return a single course
-    """
-    # course_key = CourseKey.from_string(course_key_string)
-    # course_usage_key = modulestore().make_course_usage_key(course_key)
-
-    course = get_course_by_id(CourseKey.from_string(course_key_string))
+    course = get_course_by_id(course_key)
     return CourseSerializer(course, context={'request': request})
 
 
 def list_courses(requesting_user, username, request):
     """
     Return a list of courses visible to the user identified by `username` on
-    behalf of `requesting_user`
+    behalf of `requesting_user`.
     """
 
-    if _has_permission(requesting_user, username) is not True:
-        raise ValueError  # Raise something better than this
+    if not can_view_courses_for_username(requesting_user, username):
+        raise PermissionDenied
+
     if username:
         user = User.objects.get(username=username)
     else:
