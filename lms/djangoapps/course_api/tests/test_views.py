@@ -109,7 +109,7 @@ class CourseListViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):
 
     def test_not_logged_in(self):
         self.client.logout()
-        self.verify_response(403)
+        self.verify_response()
 
 
 class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):

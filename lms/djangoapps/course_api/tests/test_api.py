@@ -4,6 +4,7 @@ Test for course API
 
 from datetime import datetime
 
+from django.contrib.auth.models import AnonymousUser
 from django.http import Http404
 from django.test import RequestFactory
 from rest_framework.exceptions import PermissionDenied
@@ -149,6 +150,17 @@ class TestGetCourseList(CourseApiTestMixin, SharedModuleStoreTestCase):
     def test_for_staff_user_as_honor(self):
         with self.assertRaises(PermissionDenied):
             self._make_api_call(self.honor_user, self.staff_user)
+
+    def test_as_anonymous(self):
+        anonuser = AnonymousUser()
+        courses = self._make_api_call(anonuser, anonuser)
+        self.assertEqual(len(courses.data), 1)
+        self.assertEqual(courses.data[0], self.expected_course_data)
+
+    def test_for_honor_user_as_anonymous(self):
+        anonuser = AnonymousUser()
+        with self.assertRaises(PermissionDenied):
+            self._make_api_call(anonuser, self.staff_user)
 
     def test_multiple_courses(self):
         self.create_course(course='second')

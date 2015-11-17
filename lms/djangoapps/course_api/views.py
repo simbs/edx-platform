@@ -20,7 +20,6 @@ class CourseDetailView(APIView):
     """
     View class to describe a course
     """
-    permission_classes = [IsAuthenticated]
 
     def get(self, request, course_key_string):
         """
@@ -89,7 +88,6 @@ class CourseListView(APIView):
     """
     View class to list multiple courses
     """
-    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         """
