@@ -13,17 +13,51 @@ from xmodule.course_module import DEFAULT_START_DATE
 from lms.djangoapps.courseware.courses import course_image_url, get_course_about_section
 
 
+class _MediaSerializer(serializers.Serializer):
+    def __init__(self, name=u'', description=u'', type=u'', uri_parser=lambda x: x, *args, **kwargs):
+        super(_MediaSerializer, self).__init__(*args, **kwargs)
+
+        self.name_value = name
+        self.description_value = description
+        self.type_value = type
+        self.uri_parser = uri_parser
+
+    uri = serializers.SerializerMethodField(source='*')
+    name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+
+    def get_name(self, _):
+        return self.name_value
+
+    def get_description(self, _):
+        return self.description_value
+
+    def get_type(self, _):
+        return self.type_value
+
+    def get_uri(self, course):
+        '''
+        Get the representation for SerializerMethodField `course_image`
+        '''
+        return self.uri_parser(course)
+
+
+class _MediaCollectionSerializer(serializers.Serializer):
+    image = _MediaSerializer(source='*', name=u'Course Image', description=u'', type=u'logo', uri_parser=course_image_url)
+
+
 class CourseSerializer(serializers.Serializer):  # pylint: disable=abstract-method
     """
     Serializer for Course objects
     """
 
-    id = serializers.CharField(read_only=True)  # pylint: disable=invalid-name
+    course_id = serializers.CharField(source='id', read_only=True)  # pylint: disable=invalid-name
     name = serializers.CharField(source='display_name_with_default')
     number = serializers.CharField(source='display_number_with_default')
     org = serializers.CharField(source='display_org_with_default')
-    description = serializers.SerializerMethodField()
-    course_image = serializers.SerializerMethodField()
+    short_description = serializers.SerializerMethodField()
+    media = _MediaCollectionSerializer(source='*')
     start = serializers.DateTimeField()
     start_type = serializers.SerializerMethodField()
     start_display = serializers.SerializerMethodField()
@@ -54,17 +88,11 @@ class CourseSerializer(serializers.Serializer):  # pylint: disable=abstract-meth
         else:
             return None
 
-    def get_description(self, course):
+    def get_short_description(self, course):
         '''
         Get the representation for SerializerMethodField `description`
         '''
         return get_course_about_section(self.context['request'], course, 'short_description').strip()
-
-    def get_course_image(self, course):
-        '''
-        Get the representation for SerializerMethodField `course_image`
-        '''
-        return course_image_url(course)
 
     def get_blocks_url(self, course):
         '''

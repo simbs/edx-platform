@@ -19,22 +19,29 @@ class CourseApiTestMixin(CourseApiFactoryMixin):
     Establish basic functionality for Course API tests
     """
 
-    maxDiff = 1000  # long enough to show mismatched dicts
+    maxDiff = 5000  # long enough to show mismatched dicts
 
     expected_course_data = {
-        'blocks_url': '/api/courses/v1/blocks/?course_id=edX%2Ftoy%2F2012_Fall',
-        'course_image': u'/c4x/edX/toy/asset/just_a_test.jpg',
-        'description': u'A course about toys.',
-        'end': u'2015-09-19T18:00:00Z',
-        'enrollment_end': u'2015-07-15T00:00:00Z',
-        'enrollment_start': u'2015-06-15T00:00:00Z',
-        'id': u'edX/toy/2012_Fall',
+        'course_id': u'edX/toy/2012_Fall',
         'name': u'Toy Course',
         'number': u'toy',
         'org': u'edX',
+        'short_description': u'A course about toys.',
+        'media': {
+            'image': {
+                'uri': u'/c4x/edX/toy/asset/just_a_test.jpg',
+                'name': u'Course Image',
+                'description': u'',
+                'type': u'logo',
+            }
+        },
         'start': u'2015-07-17T12:00:00Z',
-        'start_display': u'July 17, 2015',
         'start_type': u'timestamp',
+        'start_display': u'July 17, 2015',
+        'end': u'2015-09-19T18:00:00Z',
+        'enrollment_start': u'2015-06-15T00:00:00Z',
+        'enrollment_end': u'2015-07-15T00:00:00Z',
+        'blocks_url': '/api/courses/v1/blocks/?course_id=edX%2Ftoy%2F2012_Fall',
     }
 
     @classmethod
