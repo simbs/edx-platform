@@ -2,53 +2,17 @@
 Tests for Blocks Views
 """
 
-from datetime import datetime
-
 from django.core.urlresolvers import reverse
 
-from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase
-from xmodule.modulestore.tests.factories import ToyCourseFactory
 
-TEST_PASSWORD = 'edx'
+from .mixins import CourseApiFactoryMixin, TEST_PASSWORD
 
 
-class CourseApiTestViewMixin(object):
+class CourseApiTestViewMixin(CourseApiFactoryMixin):
     """
     Mixin class for test helpers for Course API views
     """
-
-    @staticmethod
-    def create_course(**kwargs):
-        """
-        Create a course for use in test cases
-        """
-        return ToyCourseFactory.create(
-            end=datetime(2015, 9, 19, 18, 0, 0),
-            enrollment_start=datetime(2015, 6, 15, 0, 0, 0),
-            enrollment_end=datetime(2015, 7, 15, 0, 0, 0),
-            **kwargs
-        )
-
-    @staticmethod
-    def create_user(username, email, is_staff):
-        """
-        Create a user for testing purposes.
-
-        Arguments:
-            `username`: (string)
-            `email`: (string)
-            `is_staff`: (boolean)
-
-        Return value:
-            User object
-        """
-        return UserFactory(
-            username=username,
-            email=email,
-            password=TEST_PASSWORD,
-            is_staff=is_staff
-        )
 
     def setup_user(self, requesting_user):
         """
@@ -83,14 +47,13 @@ class CourseListViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):
     Test responses returned from CourseListView.
     """
 
-
     @classmethod
     def setUpClass(cls):
         super(CourseListViewTestCase, cls).setUpClass()
         cls.course = cls.create_course()
         cls.url = reverse('course-list')
-        cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
-        cls.honor_user = cls.create_user(username='honor', email='honor@example.com', is_staff=False)
+        cls.staff_user = cls.create_user(username='staff', is_staff=True)
+        cls.honor_user = cls.create_user(username='honor', is_staff=False)
 
     def test_as_staff(self):
         self.setup_user(self.staff_user)
@@ -122,7 +85,6 @@ class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase
     Test responses returned from CourseDetailView.
     """
 
-
     @classmethod
     def setUpClass(cls):
         super(CourseDetailViewTestCase, cls).setUpClass()
@@ -130,8 +92,8 @@ class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase
         cls.hidden_course = cls.create_course(course=u'hidden', visible_to_staff_only=True)
         cls.url = reverse('course-detail', kwargs={'course_key_string': cls.course.id})
         cls.hidden_url = reverse('course-detail', kwargs={'course_key_string': cls.hidden_course.id})
-        cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
-        cls.honor_user = cls.create_user(username='honor', email='honor@example.com', is_staff=False)
+        cls.staff_user = cls.create_user(username='staff', is_staff=True)
+        cls.honor_user = cls.create_user(username='honor', is_staff=False)
 
     def test_as_student(self):
         self.setup_user(self.honor_user)

@@ -2,22 +2,19 @@
 Test for course API
 """
 
-from datetime import datetime
-
 from django.contrib.auth.models import AnonymousUser
 from django.http import Http404
 from django.test import RequestFactory
 from rest_framework.exceptions import PermissionDenied
 
 from opaque_keys.edx.keys import CourseKey
-from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import SharedModuleStoreTestCase, ModuleStoreTestCase
-from xmodule.modulestore.tests.factories import ToyCourseFactory
 
-from lms.djangoapps.course_api.api import course_detail, list_courses
+from ..api import course_detail, list_courses
+from .mixins import CourseApiFactoryMixin
 
 
-class CourseApiTestMixin(object):
+class CourseApiTestMixin(CourseApiFactoryMixin):
     """
     Establish basic functionality for Course API tests
     """
@@ -44,31 +41,6 @@ class CourseApiTestMixin(object):
     def setUpClass(cls):
         super(CourseApiTestMixin, cls).setUpClass()
         cls.request_factory = RequestFactory()
-
-    @staticmethod
-    def create_course(**kwargs):
-        """
-        Create a course for use in test cases
-        """
-
-        return ToyCourseFactory.create(
-            end=datetime(2015, 9, 19, 18, 0, 0),
-            enrollment_start=datetime(2015, 6, 15, 0, 0, 0),
-            enrollment_end=datetime(2015, 7, 15, 0, 0, 0),
-            **kwargs
-        )
-
-    @staticmethod
-    def create_user(username, is_staff):
-        """
-        Create a user as identified by username, email, password and is_staff.
-        """
-        return UserFactory(
-            username=username,
-            email='{}@example.com'.format(username),
-            password='edx',
-            is_staff=is_staff
-        )
 
 
 class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
