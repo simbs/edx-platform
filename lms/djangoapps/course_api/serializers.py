@@ -63,7 +63,7 @@ class _CourseApiMediaCollectionSerializer(serializers.Serializer):  # pylint: di
         source='*',
         name=u'Course Image',
         description=u'',
-        type=u'logo',
+        type_=u'logo',
         uri_parser=course_image_url
     )
 
