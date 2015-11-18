@@ -32,7 +32,7 @@ from courseware.access_response import StartDateError
 from courseware.access_utils import in_preview_mode
 from courseware.courses import (
     get_courses, get_course, get_course_by_id,
-    get_studio_url, get_course_with_access,
+    get_studio_url, get_course_with_access, get_course_info_updates,
     sort_by_announcement,
     sort_by_start_date,
     UserNotEnrolled)
