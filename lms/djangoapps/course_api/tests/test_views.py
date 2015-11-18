@@ -2,6 +2,8 @@
 Tests for Blocks Views
 """
 
+from datetime import datetime
+
 from django.core.urlresolvers import reverse
 
 from student.tests.factories import UserFactory
@@ -17,11 +19,16 @@ class CourseApiTestViewMixin(object):
     """
 
     @staticmethod
-    def create_course():
+    def create_course(**kwargs):
         """
-        Create a sample course.
+        Create a course for use in test cases
         """
-        return ToyCourseFactory.create()
+        return ToyCourseFactory.create(
+            end=datetime(2015, 9, 19, 18, 0, 0),
+            enrollment_start=datetime(2015, 6, 15, 0, 0, 0),
+            enrollment_end=datetime(2015, 7, 15, 0, 0, 0),
+            **kwargs
+        )
 
     @staticmethod
     def create_user(username, email, is_staff):
@@ -80,7 +87,7 @@ class CourseListViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase):
     @classmethod
     def setUpClass(cls):
         super(CourseListViewTestCase, cls).setUpClass()
-        cls.course = ToyCourseFactory.create()
+        cls.course = cls.create_course()
         cls.url = reverse('course-list')
         cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
         cls.honor_user = cls.create_user(username='honor', email='honor@example.com', is_staff=False)
@@ -119,8 +126,8 @@ class CourseDetailViewTestCase(CourseApiTestViewMixin, SharedModuleStoreTestCase
     @classmethod
     def setUpClass(cls):
         super(CourseDetailViewTestCase, cls).setUpClass()
-        cls.course = ToyCourseFactory.create()
-        cls.hidden_course = ToyCourseFactory.create(course=u'hidden', visible_to_staff_only=True)
+        cls.course = cls.create_course()
+        cls.hidden_course = cls.create_course(course=u'hidden', visible_to_staff_only=True)
         cls.url = reverse('course-detail', kwargs={'course_key_string': cls.course.id})
         cls.hidden_url = reverse('course-detail', kwargs={'course_key_string': cls.hidden_course.id})
         cls.staff_user = cls.create_user(username='staff', email='staff@example.com', is_staff=True)
