@@ -13,5 +13,5 @@
       </div>
       <button class="is-disabled upload-csv-button" type="submit"><%= gettext("Upload CSV") %></button>
     </form>
-    <div class="results message-error">aad aksjd kasjd kasjdk jaskdj</div>
+    <div class="results"></div>
 </div>
