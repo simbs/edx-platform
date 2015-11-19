@@ -8,6 +8,7 @@ from pytz import UTC
 
 application_log = logging.getLogger('track.backends.application_log')  # pylint: disable=invalid-name
 
+
 class DateTimeJSONEncoder(json.JSONEncoder):
     """JSON encoder aware of datetime.datetime and datetime.date objects"""
 
@@ -48,5 +49,4 @@ class DateTimeJSONEncoder(json.JSONEncoder):
                     obj[key] = obj[key].decode('latin1')
 
         return super(DateTimeJSONEncoder, self).encode(obj)
-
 
