@@ -28,7 +28,7 @@ class CourseApiTestMixin(CourseApiFactoryMixin):
         'org': u'edX',
         'short_description': u'A course about toys.',
         'media': {
-            'image': {
+            'course_image': {
                 'uri': u'/c4x/edX/toy/asset/just_a_test.jpg',
                 'name': u'Course Image',
                 'description': u'',
