@@ -66,7 +66,8 @@ class TestLoggerBackend(TestCase):
         latin_characters = {
             'unicode_latin': u'Ó é ñ',
             'string_latin': 'Ó é ñ',
-            'encoded_latin': u'Ó é ñ'.encode('latin1')
+            'encoded_latin': u'Ó é ñ'.encode('latin1'),
+            'level_1': {'encoded_latin': u'Ó é ñ'.encode('latin1')}
         }
 
         self.backend.send(unicode_characters)
@@ -76,7 +77,7 @@ class TestLoggerBackend(TestCase):
         application_log.warning.assert_called_with(
             "UnicodeDecodeError Event-Data: %s", latin_characters['encoded_latin'].encode('latin1')
         )
-        self.assertEqual(application_log.warning.call_count, 1)
+        self.assertEqual(application_log.warning.call_count, 2)
 
         saved_events = [json.loads(e) for e in self.handler.messages['info']]
         self.assertEqual(saved_events[0]['unicode'], unicode_characters['unicode'])
@@ -85,6 +86,7 @@ class TestLoggerBackend(TestCase):
         self.assertEqual(saved_events[1]['unicode_latin'], latin_characters['unicode_latin'])
         self.assertEqual(saved_events[1]['string_latin'], latin_characters['unicode_latin'])
         self.assertEqual(saved_events[1]['encoded_latin'], latin_characters['unicode_latin'])
+        self.assertEqual(saved_events[1]['level_1']['encoded_latin'], latin_characters['unicode_latin'])
 
 
 class MockLoggingHandler(logging.Handler):

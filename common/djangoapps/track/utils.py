@@ -37,8 +37,18 @@ class DateTimeJSONEncoder(json.JSONEncoder):
         and returns result string. obj argument will be the
         object that is passed to json.dumps function
         """
-        for key in obj.iterkeys():
-            if isinstance(obj[key], str):
+        obj = self.iterate_dictionary(obj)
+
+        return super(DateTimeJSONEncoder, self).encode(obj)
+
+    def iterate_dictionary(self, obj):
+        """
+        Iterate over nested dict structure
+        """
+        for key, value in obj.iteritems():
+            if isinstance(value, dict):
+                self.iterate_dictionary(value)
+            elif isinstance(value, str):
                 try:
                     obj[key].decode('utf8')
                 except UnicodeDecodeError:
@@ -47,6 +57,4 @@ class DateTimeJSONEncoder(json.JSONEncoder):
                     #  Example {'string': '\xd3 \xe9 \xf1'}
                     application_log.warning("UnicodeDecodeError Event-Data: %s", obj[key])
                     obj[key] = obj[key].decode('latin1')
-
-        return super(DateTimeJSONEncoder, self).encode(obj)
-
+        return obj
