@@ -2708,6 +2708,63 @@ def start_certificate_regeneration(request, course_id):
 @cache_control(no_cache=True, no_store=True, must_revalidate=True)
 @require_global_staff
 @require_POST
+def create_bulk_certificate_exceptions(request, course_id):
+    course_key = CourseKey.from_string(course_id)
+    students = row_errors = general_errors = []
+    if 'students_list' in request.FILES:
+            try:
+                upload_file = request.FILES.get('students_list')
+                if upload_file.name.endswith('.csv'):
+                    students = [row for row in csv.reader(upload_file.read().splitlines())]
+                else:
+                    general_errors.append({
+                        'username': '', 'email': '',
+                        'response': _('Make sure that the file you upload is in CSV format with no '
+                                      'extraneous characters or rows.')
+                    })
+
+            except Exception:
+                general_errors.append({
+                    'user': '', 'response': _('Could not read uploaded file.')
+                })
+            finally:
+                upload_file.close()
+
+            row_num = 0
+            for student in students:
+                row_num += 1
+                # verify that we have exactly one column in every row either email or username but allow for blank lines
+                if len(student) != 1:
+                    if len(student) > 0:
+                        general_errors.append({
+                            'user': '',
+                            'response': _('Data in row #{row_num} must have exactly one column: email or username')
+                                .format(row_num=row_num)
+                        })
+                    continue
+                user = student[0]
+                try:
+                    db_user = get_user_by_username_or_email(user)
+                except ObjectDoesNotExist:
+                    row_errors.append({
+                        'user': user, 'response': _('Student (username/email={user}) does not exist').format(user=user)
+                    })
+    else:
+        general_errors.append({
+            'user': '', 'response': _('File is not attached.')
+        })
+
+    results = {
+        'row_errors': row_errors,
+        'general_errors': general_errors
+    }
+
+    return JsonResponse(results)
+
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+@require_global_staff
+@require_POST
 def create_certificate_exception(request, course_id, white_list_student=None):
     """
     Add Students to certificate white list.
