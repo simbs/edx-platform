@@ -72,8 +72,7 @@ class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
         return course_detail(request.user, target_user, course_key, request)
 
     def test_get_existing_course(self):
-        course_key = CourseKey.from_string(u'edX/toy/2012_Fall')
-        result = self._make_api_call(self.honor_user, self.honor_user.username, course_key)
+        result = self._make_api_call(self.honor_user, self.honor_user.username, self.course.id)
         self.assertEqual(self.expected_course_data, result.data)
 
     def test_get_nonexistent_course(self):
@@ -82,19 +81,16 @@ class TestGetCourseDetail(CourseApiTestMixin, SharedModuleStoreTestCase):
             self._make_api_call(self.honor_user, self.honor_user.username, course_key)
 
     def test_hidden_course_for_honor(self):
-        course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
         with self.assertRaises(Http404):
-            self._make_api_call(self.honor_user, self.honor_user.username, course_key)
+            self._make_api_call(self.honor_user, self.honor_user.username, self.hidden_course.id)
 
     def test_hidden_course_for_staff(self):
-        course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
-        result = self._make_api_call(self.staff_user, self.staff_user.username, course_key)
+        result = self._make_api_call(self.staff_user, self.staff_user.username, self.hidden_course.id)
         self.assertIsInstance(result.data, dict)
 
     def test_hidden_course_for_staff_as_honor(self):
-        course_key = CourseKey.from_string(u'edX/hidden/2012_Fall')
         with self.assertRaises(Http404):
-            self._make_api_call(self.honor_user, self.honor_user.username, course_key)
+            self._make_api_call(self.staff_user, self.honor_user.username, self.hidden_course.id)
 
 
 class CourseListTestMixin(CourseApiTestMixin):
