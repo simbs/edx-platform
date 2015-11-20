@@ -31,6 +31,12 @@ class DateTimeJSONEncoder(json.JSONEncoder):
 
         return super(DateTimeJSONEncoder, self).default(obj)
 
+
+class LatinJSONEncoder(DateTimeJSONEncoder):
+    """
+    JSON encoder for UnicodeDecodeError with latin1 characters
+    """
+
     def encode(self, obj):
         """
         encode method gets an original object
@@ -58,3 +64,4 @@ class DateTimeJSONEncoder(json.JSONEncoder):
                     application_log.warning("UnicodeDecodeError Event-Data: %s", obj[key])
                     obj[key] = obj[key].decode('latin1')
         return obj
+
