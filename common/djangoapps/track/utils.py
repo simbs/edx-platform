@@ -45,7 +45,7 @@ class LatinJSONEncoder(DateTimeJSONEncoder):
         """
         obj = self.iterate_dictionary(obj)
 
-        return super(DateTimeJSONEncoder, self).encode(obj)
+        return super(LatinJSONEncoder, self).encode(obj)
 
     def iterate_dictionary(self, obj):
         """
