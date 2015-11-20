@@ -1928,6 +1928,7 @@ class CertificateItem(OrderItem):
 
     def additional_instruction_text(self):
         verification_reminder = ""
+        refund_reminder_msg = _("You have up to two weeks into the course to unenroll and receive a full refund. ")
         is_enrollment_mode_verified = self.course_enrollment.is_verified_enrollment()  # pylint: disable=E1101
         is_professional_mode_verified = self.course_enrollment.is_professional_enrollment()  # pylint: disable=E1101
 
@@ -1941,23 +1942,18 @@ class CertificateItem(OrderItem):
             ).format(verification_url=verification_url)
 
         if is_professional_mode_verified:
-            refund_reminder = _(
-                "You have only until two days after the course starts to unenroll and receive a full refund. "
-                "To receive your refund, contact {billing_email}. "
-                "Please include your order number in your email. "
-                "Please do NOT include your credit card information."
-            ).format(
-                billing_email=settings.PAYMENT_SUPPORT_EMAIL
-            )
-        else:
-            refund_reminder = _(
-                "You have up to two weeks into the course to unenroll and receive a full refund."
-                "To receive your refund, contact {billing_email}. "
-                "Please include your order number in your email. "
-                "Please do NOT include your credit card information."
-            ).format(
-                billing_email=settings.PAYMENT_SUPPORT_EMAIL
-            )
+            refund_reminder_msg = _("You have only until two days after the course starts to unenroll and receive a "
+                                    "full refund. ")
+
+        refund_reminder = _(
+            "{refund_reminder_msg}"
+            "To receive your refund, contact {billing_email}. "
+            "Please include your order number in your email. "
+            "Please do NOT include your credit card information."
+        ).format(
+            refund_reminder_msg=refund_reminder_msg,
+            billing_email=settings.PAYMENT_SUPPORT_EMAIL
+        )
 
         # Need this to be unicode in case the reminder strings
         # have been translated and contain non-ASCII unicode
