@@ -1929,6 +1929,7 @@ class CertificateItem(OrderItem):
     def additional_instruction_text(self):
         verification_reminder = ""
         is_enrollment_mode_verified = self.course_enrollment.is_verified_enrollment()  # pylint: disable=E1101
+        is_professional_mode_verified = self.course_enrollment.is_professional_enrollment()  # pylint: disable=E1101
 
         if is_enrollment_mode_verified:
             domain = microsite.get_value('SITE_NAME', settings.SITE_NAME)
@@ -1939,14 +1940,24 @@ class CertificateItem(OrderItem):
                 "If you haven't verified your identity yet, please start the verification process ({verification_url})."
             ).format(verification_url=verification_url)
 
-        refund_reminder = _(
-            "You have up to two weeks into the course to unenroll and receive a full refund."
-            "To receive your refund, contact {billing_email}. "
-            "Please include your order number in your email. "
-            "Please do NOT include your credit card information."
-        ).format(
-            billing_email=settings.PAYMENT_SUPPORT_EMAIL
-        )
+        if is_professional_mode_verified:
+            refund_reminder = _(
+                "You have only until two days after the course starts to unenroll and receive a full refund. "
+                "To receive your refund, contact {billing_email}. "
+                "Please include your order number in your email. "
+                "Please do NOT include your credit card information."
+            ).format(
+                billing_email=settings.PAYMENT_SUPPORT_EMAIL
+            )
+        else:
+            refund_reminder = _(
+                "You have up to two weeks into the course to unenroll and receive a full refund."
+                "To receive your refund, contact {billing_email}. "
+                "Please include your order number in your email. "
+                "Please do NOT include your credit card information."
+            ).format(
+                billing_email=settings.PAYMENT_SUPPORT_EMAIL
+            )
 
         # Need this to be unicode in case the reminder strings
         # have been translated and contain non-ASCII unicode
